@@ -27,7 +27,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import SettingsPage from "./SettingsPage"
+import HowToConnectPage from "./HowToConnectPage"
+import HelpCenterPage from "./HelpCenterPage"
 
 
 const menuContent = {
@@ -39,9 +43,9 @@ const menuContent = {
   spam: <div>Spam Content</div>,
   trash: <div>Trash Content</div>,
 
-  settings: <div>Settings Page</div>,
-  "how-to-connect": <div>How to Connect Page</div>,
-  "help-center": <div>Help Center Page</div>,
+  settings: <SettingsPage />,
+  "how-to-connect": <HowToConnectPage />,
+  "help-center": <HelpCenterPage />,
 }
 
 export default function Page() {

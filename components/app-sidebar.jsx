@@ -12,6 +12,10 @@ import {
     Settings,
     Link2,
     HelpCircle,
+    FolderPlus,
+    Upload,
+    FolderUp,
+    Plus,
 } from "lucide-react"
 
 import { TeamSwitcher } from "@/components/team-switcher"
@@ -89,7 +93,9 @@ const extraLinks = [
     },
 ]
 
-
+// Google Drive-like "New" button styles
+const googleDriveNewButton =
+    "flex items-center justify-center w-full rounded-full bg-primary hover:bg-[#1765c1] text-white font-medium py-3 transition-colors shadow-md text-base gap-2 mb-4"
 
 export function AppSidebar({ onMenuSelect, selectedMenu, ...props }) {
     const [drives, setDrives] = useState([])
@@ -121,21 +127,39 @@ export function AppSidebar({ onMenuSelect, selectedMenu, ...props }) {
             <SidebarContent>
                 {drives.length > 0 && selectedDrive ? (
                     <>
-                        <div className="flex items-center justify-between px-2 py-1">
-                            <span className="font-semibold">Options</span>
-                            <SidebarMenuButton size="sm" variant="outline">
-                                +
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <span className="sr-only">Open actions</span>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => onMenuSelect && onMenuSelect("create-folder")}>Create Folder</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => onMenuSelect && onMenuSelect("upload-files")}>Upload Files</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => onMenuSelect && onMenuSelect("upload-folder")}>Upload Folder</DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </SidebarMenuButton>
+                        <div className="flex justify-center px-2 py-3">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <SidebarMenuButton
+                                        size="lg"
+                                        variant="ghost"
+                                        className={googleDriveNewButton}
+                                        style={{
+                                            maxWidth: 180,
+                                        }}
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        <span>New</span>
+                                    </SidebarMenuButton>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => onMenuSelect && onMenuSelect("create-folder")}
+                                        className="flex items-center gap-2">
+                                        <FolderPlus className="w-4 h-4 mr-2" />
+                                        Create Folder
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => onMenuSelect && onMenuSelect("upload-files")}
+                                        className="flex items-center gap-2">
+                                        <Upload className="w-4 h-4 mr-2" />
+                                        Upload Files
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => onMenuSelect && onMenuSelect("upload-folder")}
+                                        className="flex items-center gap-2">
+                                        <FolderUp className="w-4 h-4 mr-2" />
+                                        Upload Folder
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                         <SidebarMenu>
                             {navLinks.map(item => (

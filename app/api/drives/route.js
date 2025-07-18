@@ -3,8 +3,11 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Drive from "@/lib/driveModel";
 import User from "@/lib/userModel";
+import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 export async function GET(req) {
+  const url = new URL(req.url);
+  const prefix = url.searchParams.get("prefix") || "";
   try {
     await dbConnect();
     const session = await getServerSession(authOptions);
@@ -19,6 +22,41 @@ export async function GET(req) {
     }
     // Only return drives with the required fields
     const drives = await Drive.find({ user: user._id }).select("bucketName accessKeyId secretAccessKey region");
+    // If prefix param is present, list S3 objects for the first drive
+    if (prefix !== null && drives.length > 0) {
+      const drive = drives[0]; // For now, use the first drive
+      const s3 = new S3Client({
+        region: drive.region,
+        credentials: {
+          accessKeyId: drive.accessKeyId,
+          secretAccessKey: drive.secretAccessKey,
+        },
+      });
+      try {
+        const command = new ListObjectsV2Command({
+          Bucket: drive.bucketName,
+          Prefix: prefix,
+          Delimiter: "/",
+        });
+        const data = await s3.send(command);
+        const folders = (data.CommonPrefixes || []).map((p) => ({
+          name: p.Prefix.replace(prefix, "").replace(/\/$/, ""),
+          prefix: p.Prefix,
+        }));
+        const files = (data.Contents || [])
+          .filter((f) => f.Key !== prefix) // Exclude the folder itself
+          .map((f) => ({
+            name: f.Key.replace(prefix, ""),
+            key: f.Key,
+            size: f.Size,
+            lastModified: f.LastModified,
+          }));
+        return new Response(JSON.stringify({ folders, files }), { status: 200 });
+      } catch (err) {
+        console.error("GET /api/drives: S3 list error", err);
+        return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+      }
+    }
     return new Response(JSON.stringify(drives), { status: 200 });
   } catch (err) {
     console.error("GET /api/drives: Error occurred", err);
