@@ -16,7 +16,7 @@ const corsJson = `[
       "HEAD"
     ],
     "AllowedOrigins": [
-      "https://storage.example.com"
+      "https://my-s3-drive.vercel.app"
     ],
     "ExposeHeaders": [
       "ETag"

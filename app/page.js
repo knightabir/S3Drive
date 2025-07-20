@@ -7,7 +7,7 @@ export const metadata = {
   openGraph: {
     title: "S3Drive | Secure S3 File Manager",
     description: "S3Drive is a modern, user-friendly web app for managing your AWS S3 files with ease and security.",
-    url: "https://yourdomain.com/",
+    url: "https://my-s3-drive.vercel.app/",
     siteName: "S3Drive",
     images: [
       {
