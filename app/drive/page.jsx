@@ -11,6 +11,30 @@ import { getS3Client } from '@/lib/s3-client';
 import { ListObjectsV2Command, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import FileList from './fileList';
+import { ChevronRight, ArrowUpFromLine } from 'lucide-react';
+
+function toSegments(prefix) {
+  return prefix.split('/').filter(Boolean);
+}
+
+function parentPrefix(prefix) {
+  const segments = toSegments(prefix);
+  if (segments.length === 0) return '';
+  return `${segments.slice(0, -1).join('/')}${segments.length > 1 ? '/' : ''}`;
+}
+
+function getPathParts(prefix) {
+  const segments = toSegments(prefix);
+  const parts = [{ label: 'Root', value: '' }];
+
+  let build = '';
+  segments.forEach((segment) => {
+    build += `${segment}/`;
+    parts.push({ label: segment, value: build });
+  });
+
+  return parts;
+}
 
 export default function DrivePage() {
   const [credentials, setCredentials] = useState(null);
@@ -20,6 +44,7 @@ export default function DrivePage() {
   const [error, setError] = useState(null);
   const [folderModalOpen, setFolderModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [uploadTarget, setUploadTarget] = useState('current');
   const router = useRouter();
 
   useEffect(() => {
@@ -40,6 +65,7 @@ export default function DrivePage() {
 
   const fetchBucketContents = async () => {
     try {
+      setError(null);
       const s3Client = getS3Client(credentials);
       const command = new ListObjectsV2Command({
         Bucket: credentials.bucketName,
@@ -47,7 +73,7 @@ export default function DrivePage() {
         Delimiter: '/',
       });
       const response = await s3Client.send(command);
-      setContents(response.Contents || []);
+      setContents((response.Contents || []).filter((item) => item.Key !== prefix));
       setFolders((response.CommonPrefixes && response.CommonPrefixes.map((p) => p.Prefix)) || []);
     } catch (err) {
       setError('Failed to list contents: ' + (err && err.message ? err.message : 'Unknown error'));
@@ -106,12 +132,33 @@ export default function DrivePage() {
     }
   };
 
+  const handlePreview = async (key) => {
+    try {
+      const s3Client = getS3Client(credentials);
+      const url = await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: credentials.bucketName,
+          Key: key,
+        }),
+        { expiresIn: 3600 }
+      );
+      return url;
+    } catch (err) {
+      setError('Failed to generate preview link: ' + (err && err.message ? err.message : 'Unknown error'));
+      return '';
+    }
+  };
+
   const handleDisconnect = () => {
     localStorage.removeItem('s3Credentials');
     router.push('/config');
   };
 
   if (!credentials) return null;
+
+  const pathParts = getPathParts(prefix);
+  const effectiveUploadPrefix = uploadTarget === 'root' ? '' : prefix;
 
   return (
     <main className="pb-10 pt-8 sm:pt-10">
@@ -130,16 +177,58 @@ export default function DrivePage() {
             </Button>
           </div>
 
-          <div className="mb-6 grid gap-4 lg:grid-cols-[auto_1fr]">
-            <Button onClick={() => setFolderModalOpen(true)} className="h-11 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110">
-              Create Folder
+          <div className="mb-5 flex flex-col gap-3 rounded-xl border border-[var(--border)]/80 bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-1 text-sm text-[var(--muted-foreground)]">
+              {pathParts.map((part, index) => (
+                <div key={part.value || 'root'} className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className="rounded px-1.5 py-0.5 transition hover:bg-white/10 hover:text-[var(--foreground)]"
+                    onClick={() => setPrefix(part.value)}
+                  >
+                    {part.label}
+                  </button>
+                  {index < pathParts.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[var(--border)] bg-transparent text-[var(--foreground)]"
+              onClick={() => setPrefix(parentPrefix(prefix))}
+              disabled={!prefix}
+            >
+              <ArrowUpFromLine className="mr-2 h-3.5 w-3.5" />
+              Up
             </Button>
-            <UploadDropzone bucketName={credentials.bucketName} prefix={prefix} onUploadComplete={fetchBucketContents} />
+          </div>
+
+          <div className="mb-4 grid gap-4 lg:grid-cols-[auto_1fr]">
+            <Button onClick={() => setFolderModalOpen(true)} className="h-11 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110">
+              New Folder
+            </Button>
+            <UploadDropzone
+              bucketName={credentials.bucketName}
+              prefix={effectiveUploadPrefix}
+              onUploadComplete={fetchBucketContents}
+              uploadTarget={uploadTarget}
+              onUploadTargetChange={setUploadTarget}
+              currentPrefix={prefix}
+            />
           </div>
 
           {error && <p className="mb-4 rounded-lg border border-[var(--destructive)]/40 bg-[var(--destructive)]/10 px-3 py-2 text-sm text-red-200">{error}</p>}
 
-          <FileList contents={contents} folders={folders} onFolderClick={setPrefix} onDelete={handleDelete} onShare={handleShare} />
+          <FileList
+            contents={contents}
+            folders={folders}
+            onFolderClick={setPrefix}
+            onDelete={handleDelete}
+            onShare={handleShare}
+            onPreview={handlePreview}
+            currentPrefix={prefix}
+          />
 
           <Dialog open={folderModalOpen} onOpenChange={setFolderModalOpen}>
             <DialogContent className="border-[var(--border)] bg-[var(--card)]">

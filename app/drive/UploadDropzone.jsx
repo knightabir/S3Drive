@@ -7,7 +7,7 @@ import { Upload as S3Upload } from '@aws-sdk/lib-storage';
 import { Upload } from 'lucide-react';
 
 export default function UploadDropzone(props) {
-  const { bucketName, prefix, onUploadComplete } = props;
+  const { bucketName, prefix, onUploadComplete, uploadTarget, onUploadTargetChange, currentPrefix } = props;
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -77,14 +77,46 @@ export default function UploadDropzone(props) {
       }}
       onDrop={handleDrop}
     >
+      <div className="mb-3 flex flex-wrap justify-center gap-2 text-xs">
+        <button
+          type="button"
+          className={`rounded-full px-3 py-1 transition ${
+            uploadTarget === 'current'
+              ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+              : 'border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-white/5'
+          }`}
+          onClick={() => onUploadTargetChange('current')}
+          disabled={uploading}
+        >
+          Upload to Current Folder
+        </button>
+        <button
+          type="button"
+          className={`rounded-full px-3 py-1 transition ${
+            uploadTarget === 'root'
+              ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+              : 'border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-white/5'
+          }`}
+          onClick={() => onUploadTargetChange('root')}
+          disabled={uploading}
+        >
+          Upload to Root
+        </button>
+      </div>
+
       <Upload className="mx-auto mb-2 h-7 w-7 text-[var(--secondary)]" />
-      <p className="text-sm text-[var(--muted-foreground)]">Drag and drop files here or choose files to upload.</p>
+      <p className="text-sm text-[var(--muted-foreground)]">Drag files here or choose files.</p>
+      <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+        Target: {uploadTarget === 'root' ? 'Root ( / )' : currentPrefix || 'Root ( / )'}
+      </p>
+
       <input type="file" multiple onChange={handleChange} className="hidden" id="file-upload" disabled={uploading} />
       <label htmlFor="file-upload">
         <Button className="mt-3 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110" disabled={uploading} asChild>
           <span>{uploading ? 'Uploading…' : 'Select Files'}</span>
         </Button>
       </label>
+
       {(uploading || progress > 0) && (
         <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-[var(--muted)]">
           <div className="h-full rounded-full bg-[var(--secondary)] transition-all duration-300" style={{ width: `${progress}%` }} />

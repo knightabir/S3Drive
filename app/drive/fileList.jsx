@@ -2,16 +2,20 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileIcon, FolderIcon, FolderOpen, Share2, Download, Trash2 } from 'lucide-react';
+import { FileIcon, FolderIcon, FolderOpen, Share2, Download, Trash2, Eye } from 'lucide-react';
 import { getS3Client, retryOperation } from '@/lib/s3-client';
 import { GetObjectCommand, ListPartsCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ShareDialog from './ShareDialog';
+import PreviewDialog from './PreviewDialog';
 
 export default function FileList(props) {
-  const { contents, folders, onFolderClick, onDelete, onShare } = props;
+  const { contents, folders, onFolderClick, onDelete, onShare, onPreview, currentPrefix } = props;
   const [shareUrl, setShareUrl] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewKey, setPreviewKey] = useState('');
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const credentials = JSON.parse(localStorage.getItem('s3Credentials') || '{}');
 
   const handleShare = async (key) => {
@@ -19,6 +23,15 @@ export default function FileList(props) {
     if (url) {
       setShareUrl(url);
       setShareDialogOpen(true);
+    }
+  };
+
+  const handlePreview = async (key) => {
+    const url = await onPreview(key);
+    if (url) {
+      setPreviewUrl(url);
+      setPreviewKey(key);
+      setPreviewDialogOpen(true);
     }
   };
 
@@ -97,7 +110,7 @@ export default function FileList(props) {
         <div className="space-y-2">
           {folders.length === 0 ? (
             <p className="rounded-lg border border-dashed border-[var(--border)] p-4 text-sm text-[var(--muted-foreground)]">
-              No folders yet.
+              No folders in {currentPrefix ? 'this location' : 'root'}.
             </p>
           ) : (
             folders.map((folder) => (
@@ -108,7 +121,7 @@ export default function FileList(props) {
                   onClick={() => onFolderClick(folder)}
                 >
                   <FolderIcon className="h-4 w-4" />
-                  <span>{folder}</span>
+                  <span>{folder.replace(currentPrefix, '')}</span>
                 </button>
                 <Button variant="outline" size="sm" className="border-[var(--border)] bg-transparent text-[var(--foreground)]" onClick={() => onDelete(folder)}>
                   <Trash2 className="h-3.5 w-3.5" />
@@ -134,9 +147,12 @@ export default function FileList(props) {
               <div key={item.Key} className="flex flex-col gap-3 rounded-lg border border-[var(--border)]/70 bg-[var(--card)]/40 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex items-center gap-2 text-sm text-[var(--foreground)]">
                   <FileIcon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{item.Key}</span>
+                  <span className="truncate">{item.Key.replace(currentPrefix, '')}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="border-[var(--border)] bg-transparent text-[var(--foreground)]" onClick={() => handlePreview(item.Key)}>
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
                   <Button variant="outline" size="sm" className="border-[var(--border)] bg-transparent text-[var(--foreground)]" onClick={() => handleShare(item.Key)}>
                     <Share2 className="h-3.5 w-3.5" />
                   </Button>
@@ -154,6 +170,12 @@ export default function FileList(props) {
       </section>
 
       <ShareDialog url={shareUrl} opened={shareDialogOpen} onClose={() => setShareDialogOpen(false)} />
+      <PreviewDialog
+        fileKey={previewKey}
+        previewUrl={previewUrl}
+        opened={previewDialogOpen}
+        onClose={() => setPreviewDialogOpen(false)}
+      />
     </div>
   );
 }
