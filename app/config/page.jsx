@@ -3,18 +3,21 @@ import S3LoginForm from './configForm';
 import HowToConnect from './howToConnect';
 
 const page = () => {
-    return (
-        <main className="min-h-screen flex flex-col items-center justify-center bg-[var(--background)] py-12">
-            <header className="w-full max-w-2xl mx-auto text-center mb-8">
-                <h1 className="text-4xl font-extrabold text-[var(--primary)] mb-2">Connect Your AWS S3 Storage</h1>
-                <p className="text-lg text-[var(--foreground)] mb-4">
-                    Easily link your S3 bucket to manage files with <span className="font-semibold">S3Drive</span>. Follow the steps below to get started.
-                </p>
-            </header>
-            <S3LoginForm />
-            <HowToConnect />
-        </main>
-    );
+  return (
+    <main className="pb-12 pt-10 sm:pt-14">
+      <section className="section-shell">
+        <header className="mx-auto mb-8 max-w-3xl text-center">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--secondary)]">Connection Setup</p>
+          <h1 className="text-3xl font-bold sm:text-4xl">Connect your AWS S3 workspace securely</h1>
+          <p className="mt-3 text-sm text-[var(--muted-foreground)] sm:text-base">
+            Add your credentials locally in-browser, validate access, and start managing files with a cleaner professional interface.
+          </p>
+        </header>
+        <S3LoginForm />
+        <HowToConnect />
+      </section>
+    </main>
+  );
 };
 
 export default page;
