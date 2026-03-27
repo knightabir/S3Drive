@@ -2,9 +2,52 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { getS3Client } from '@/lib/s3-client';
+import { getS3Client, retryOperation } from '@/lib/s3-client';
 import { Upload as S3Upload } from '@aws-sdk/lib-storage';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from 'lucide-react';
+
+function isChecksumMultipartError(err) {
+  const message = String(err?.message || '').toLowerCase();
+  return (
+    message.includes('checksum') &&
+    (message.includes('part') || message.includes('multipart') || message.includes('crc32'))
+  );
+}
+
+async function uploadWithMultipart(s3Client, bucketName, key, file, onProgress) {
+  const upload = new S3Upload({
+    client: s3Client,
+    params: {
+      Bucket: bucketName,
+      Key: key,
+      Body: file,
+    },
+    partSize: 8 * 1024 * 1024,
+    queueSize: 3,
+    leavePartsOnError: false,
+  });
+
+  upload.on('httpUploadProgress', (evt) => {
+    if (evt.total) {
+      onProgress(Math.round((evt.loaded / evt.total) * 100));
+    }
+  });
+
+  await upload.done();
+}
+
+async function uploadWithPutObject(s3Client, bucketName, key, file) {
+  await retryOperation(() =>
+    s3Client.send(
+      new PutObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+        Body: file,
+      })
+    )
+  );
+}
 
 export default function UploadDropzone(props) {
   const { bucketName, prefix, onUploadComplete, uploadTarget, onUploadTargetChange, currentPrefix } = props;
@@ -16,34 +59,32 @@ export default function UploadDropzone(props) {
   const processFiles = async (files) => {
     setUploading(true);
     setProgress(0);
+
     try {
       const s3Client = getS3Client(credentials);
+
       for (const file of files) {
-        const upload = new S3Upload({
-          client: s3Client,
-          params: {
-            Bucket: bucketName,
-            Key: `${prefix}${file.name}`,
-            Body: file,
-          },
-          partSize: 5 * 1024 * 1024,
-          queueSize: 4,
-          leavePartsOnError: false,
-        });
-        upload.on('httpUploadProgress', (evt) => {
-          if (evt.total) {
-            setProgress(Math.round((evt.loaded / evt.total) * 100));
+        const key = `${prefix}${file.name}`;
+
+        try {
+          await uploadWithMultipart(s3Client, bucketName, key, file, setProgress);
+        } catch (err) {
+          if (!isChecksumMultipartError(err)) {
+            throw err;
           }
-        });
-        await upload.done();
+
+          setProgress(0);
+          await uploadWithPutObject(s3Client, bucketName, key, file);
+          setProgress(100);
+        }
       }
-      setProgress(100);
+
       onUploadComplete();
     } catch (err) {
       alert('Upload failed: ' + (err && err.message ? err.message : 'Unknown error'));
     } finally {
       setUploading(false);
-      setTimeout(() => setProgress(0), 1000);
+      setTimeout(() => setProgress(0), 1200);
     }
   };
 
