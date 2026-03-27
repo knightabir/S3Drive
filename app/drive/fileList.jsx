@@ -2,16 +2,20 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileIcon, FolderIcon } from 'lucide-react';
+import { FileIcon, FolderIcon, FolderOpen, Share2, Download, Trash2, Eye } from 'lucide-react';
 import { getS3Client, retryOperation } from '@/lib/s3-client';
 import { GetObjectCommand, ListPartsCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import ShareDialog from './ShareDialog';
+import PreviewDialog from './PreviewDialog';
 
 export default function FileList(props) {
-  const { contents, folders, onFolderClick, onDelete, onShare } = props;
+  const { contents, folders, onFolderClick, onDelete, onShare, onPreview, currentPrefix } = props;
   const [shareUrl, setShareUrl] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewKey, setPreviewKey] = useState('');
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const credentials = JSON.parse(localStorage.getItem('s3Credentials') || '{}');
 
   const handleShare = async (key) => {
@@ -22,30 +26,43 @@ export default function FileList(props) {
     }
   };
 
+  const handlePreview = async (key) => {
+    const url = await onPreview(key);
+    if (url) {
+      setPreviewUrl(url);
+      setPreviewKey(key);
+      setPreviewDialogOpen(true);
+    }
+  };
+
   const handleDownload = async (key) => {
     try {
       const s3Client = getS3Client(credentials);
-      // Check if the object is multipart by listing parts
       const listParts = await retryOperation(() =>
-        s3Client.send(new ListPartsCommand({
-          Bucket: credentials.bucketName,
-          Key: key,
-        }))
+        s3Client.send(
+          new ListPartsCommand({
+            Bucket: credentials.bucketName,
+            Key: key,
+          })
+        )
       );
 
       if (listParts.Parts && listParts.Parts.length > 0) {
-        // Multipart download
         const chunks = [];
         for (const part of listParts.Parts) {
           const partNumber = part.PartNumber;
-          const url = await retryOperation(() =>
-            getSignedUrl(s3Client, new GetObjectCommand({
-              Bucket: credentials.bucketName,
-              Key: key,
-              PartNumber: partNumber,
-            }), { expiresIn: 3600 })
+          const partUrl = await retryOperation(() =>
+            getSignedUrl(
+              s3Client,
+              new GetObjectCommand({
+                Bucket: credentials.bucketName,
+                Key: key,
+                PartNumber: partNumber,
+              }),
+              { expiresIn: 3600 }
+            )
           );
-          const response = await retryOperation(() => fetch(url));
+          const response = await retryOperation(() => fetch(partUrl));
           if (!response.ok) throw new Error(`Failed to fetch part ${partNumber}`);
           const chunk = await response.blob();
           chunks.push(chunk);
@@ -58,12 +75,15 @@ export default function FileList(props) {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        // Single-part download
         const url = await retryOperation(() =>
-          getSignedUrl(s3Client, new GetObjectCommand({
-            Bucket: credentials.bucketName,
-            Key: key,
-          }), { expiresIn: 3600 })
+          getSignedUrl(
+            s3Client,
+            new GetObjectCommand({
+              Bucket: credentials.bucketName,
+              Key: key,
+            }),
+            { expiresIn: 3600 }
+          )
         );
         const response = await retryOperation(() => fetch(url));
         if (!response.ok) throw new Error('Failed to fetch file');
@@ -81,44 +101,81 @@ export default function FileList(props) {
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-[var(--primary)]">Folders</h2>
-      <div className="grid gap-2">
-        {folders.map((folder) => (
-          <div key={folder} className="flex items-center justify-between p-2 bg-[var(--card)] rounded-md shadow-sm">
-            <div className="flex items-center gap-2 cursor-pointer text-[var(--secondary)] hover:text-[var(--primary)]" onClick={() => onFolderClick(folder)}>
-              <FolderIcon className="w-5 h-5" />
-              <span>{folder}</span>
-            </div>
-            <Button variant="outline" size="sm" className="hover:bg-[var(--brand-yellow)]" onClick={() => onDelete(folder)}>
-              Delete
-            </Button>
-          </div>
-        ))}
-      </div>
-      <h2 className="text-xl font-semibold mt-6 text-[var(--primary)]">Files</h2>
-      <div className="grid gap-2">
-        {contents.map((item) => (
-          <div key={item.Key} className="flex items-center justify-between p-2 bg-[var(--card)] rounded-md shadow-sm">
-            <div className="flex items-center gap-2 text-[var(--foreground)]">
-              <FileIcon className="w-5 h-5" />
-              <span>{item.Key}</span>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="hover:bg-[var(--brand-yellow)]" onClick={() => handleShare(item.Key)}>
-                Share
-              </Button>
-              <Button variant="outline" size="sm" className="hover:bg-[var(--brand-yellow)]" onClick={() => handleDownload(item.Key)}>
-                Download
-              </Button>
-              <Button variant="outline" size="sm" className="hover:bg-[var(--brand-yellow)]" onClick={() => onDelete(item.Key)}>
-                Delete
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="grid gap-6 lg:grid-cols-2">
+      <section className="rounded-2xl border border-[var(--border)]/80 bg-black/15 p-4">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[var(--card-foreground)]">
+          <FolderOpen className="h-5 w-5 text-[var(--secondary)]" />
+          Folders
+        </h2>
+        <div className="space-y-2">
+          {folders.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-[var(--border)] p-4 text-sm text-[var(--muted-foreground)]">
+              No folders in {currentPrefix ? 'this location' : 'root'}.
+            </p>
+          ) : (
+            folders.map((folder) => (
+              <div key={folder} className="flex items-center justify-between rounded-lg border border-[var(--border)]/70 bg-[var(--card)]/40 px-3 py-2">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-sm text-[var(--foreground)] transition hover:text-[var(--secondary)]"
+                  onClick={() => onFolderClick(folder)}
+                >
+                  <FolderIcon className="h-4 w-4" />
+                  <span>{folder.replace(currentPrefix, '')}</span>
+                </button>
+                <Button variant="outline" size="sm" className="border-[var(--border)] bg-transparent text-[var(--foreground)]" onClick={() => onDelete(folder)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[var(--border)]/80 bg-black/15 p-4">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[var(--card-foreground)]">
+          <FileIcon className="h-5 w-5 text-[var(--secondary)]" />
+          Files
+        </h2>
+        <div className="space-y-2">
+          {contents.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-[var(--border)] p-4 text-sm text-[var(--muted-foreground)]">
+              No files in this location.
+            </p>
+          ) : (
+            contents.map((item) => (
+              <div key={item.Key} className="flex flex-col gap-3 rounded-lg border border-[var(--border)]/70 bg-[var(--card)]/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex items-center gap-2 text-sm text-[var(--foreground)]">
+                  <FileIcon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{item.Key.replace(currentPrefix, '')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="border-[var(--border)] bg-transparent text-[var(--foreground)]" onClick={() => handlePreview(item.Key)}>
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="outline" size="sm" className="border-[var(--border)] bg-transparent text-[var(--foreground)]" onClick={() => handleShare(item.Key)}>
+                    <Share2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="outline" size="sm" className="border-[var(--border)] bg-transparent text-[var(--foreground)]" onClick={() => handleDownload(item.Key)}>
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="outline" size="sm" className="border-[var(--border)] bg-transparent text-[var(--foreground)]" onClick={() => onDelete(item.Key)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
       <ShareDialog url={shareUrl} opened={shareDialogOpen} onClose={() => setShareDialogOpen(false)} />
+      <PreviewDialog
+        fileKey={previewKey}
+        previewUrl={previewUrl}
+        opened={previewDialogOpen}
+        onClose={() => setPreviewDialogOpen(false)}
+      />
     </div>
   );
 }
