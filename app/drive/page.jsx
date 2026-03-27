@@ -11,7 +11,7 @@ import { getS3Client } from '@/lib/s3-client';
 import { ListObjectsV2Command, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import FileList from './fileList';
-import { ChevronRight, ArrowUpFromLine } from 'lucide-react';
+import { ChevronRight, ArrowUpFromLine, FolderPlus, HardDriveUpload } from 'lucide-react';
 
 function toSegments(prefix) {
   return prefix.split('/').filter(Boolean);
@@ -43,6 +43,7 @@ export default function DrivePage() {
   const [folders, setFolders] = useState([]);
   const [error, setError] = useState(null);
   const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [uploadTarget, setUploadTarget] = useState('current');
   const router = useRouter();
@@ -161,64 +162,55 @@ export default function DrivePage() {
   const effectiveUploadPrefix = uploadTarget === 'root' ? '' : prefix;
 
   return (
-    <main className="pb-10 pt-8 sm:pt-10">
-      <section className="section-shell">
-        <div className="glass-card rounded-3xl p-6 sm:p-8">
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <main className="w-full px-2 pb-3 pt-2 sm:px-3">
+      <section className="w-full">
+        <div className="overflow-hidden rounded-md border border-[#d0d7de] bg-white text-[#1f1f1f] shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e8eaed] bg-[#f3f3f3] px-3 py-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--secondary)]">S3 Workspace</p>
-              <h1 className="text-3xl font-bold text-[var(--card-foreground)]">My S3 Drive</h1>
-              <p className="text-sm text-[var(--muted-foreground)]">
-                Bucket: <span className="font-medium text-[var(--foreground)]">{credentials.bucketName}</span>
-              </p>
+              <h1 className="text-base font-semibold">File Explorer - S3 Drive</h1>
+              <p className="text-xs text-[#5f6368]">Bucket: {credentials.bucketName}</p>
             </div>
-            <Button variant="destructive" onClick={handleDisconnect} className="sm:w-auto">
+            <Button variant="destructive" onClick={handleDisconnect} className="h-8">
               Disconnect
             </Button>
           </div>
 
-          <div className="mb-5 flex flex-col gap-3 rounded-xl border border-[var(--border)]/80 bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-1 text-sm text-[var(--muted-foreground)]">
+          <div className="border-b border-[#e8eaed] bg-[#fafafa] px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" className="h-8 border-[#d0d7de] bg-white text-[#1f1f1f]" onClick={() => setFolderModalOpen(true)}>
+                <FolderPlus className="mr-1.5 h-4 w-4" />
+                New folder
+              </Button>
+              <Button variant="outline" className="h-8 border-[#d0d7de] bg-white text-[#1f1f1f]" onClick={() => setUploadModalOpen(true)}>
+                <HardDriveUpload className="mr-1.5 h-4 w-4" />
+                Upload
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 border-[#d0d7de] bg-white text-[#1f1f1f]"
+                onClick={() => setPrefix(parentPrefix(prefix))}
+                disabled={!prefix}
+              >
+                <ArrowUpFromLine className="mr-1.5 h-4 w-4" />
+                Up
+              </Button>
+            </div>
+          </div>
+
+          <div className="border-b border-[#e8eaed] bg-white px-3 py-2">
+            <div className="flex flex-wrap items-center gap-1 text-sm text-[#5f6368]">
               {pathParts.map((part, index) => (
                 <div key={part.value || 'root'} className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    className="rounded px-1.5 py-0.5 transition hover:bg-white/10 hover:text-[var(--foreground)]"
-                    onClick={() => setPrefix(part.value)}
-                  >
+                  <button type="button" className="rounded px-1.5 py-0.5 hover:bg-[#e8f0fe]" onClick={() => setPrefix(part.value)}>
                     {part.label}
                   </button>
                   {index < pathParts.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
                 </div>
               ))}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[var(--border)] bg-transparent text-[var(--foreground)]"
-              onClick={() => setPrefix(parentPrefix(prefix))}
-              disabled={!prefix}
-            >
-              <ArrowUpFromLine className="mr-2 h-3.5 w-3.5" />
-              Up
-            </Button>
           </div>
 
-          <div className="mb-4 grid gap-4 lg:grid-cols-[auto_1fr]">
-            <Button onClick={() => setFolderModalOpen(true)} className="h-11 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110">
-              New Folder
-            </Button>
-            <UploadDropzone
-              bucketName={credentials.bucketName}
-              prefix={effectiveUploadPrefix}
-              onUploadComplete={fetchBucketContents}
-              uploadTarget={uploadTarget}
-              onUploadTargetChange={setUploadTarget}
-              currentPrefix={prefix}
-            />
-          </div>
-
-          {error && <p className="mb-4 rounded-lg border border-[var(--destructive)]/40 bg-[var(--destructive)]/10 px-3 py-2 text-sm text-red-200">{error}</p>}
+          {error && <p className="border-b border-[#f0c2c2] bg-[#fdeaea] px-3 py-2 text-sm text-[#ad1a1a]">{error}</p>}
 
           <FileList
             contents={contents}
@@ -228,30 +220,49 @@ export default function DrivePage() {
             onShare={handleShare}
             onPreview={handlePreview}
             currentPrefix={prefix}
+            onNavigateRoot={() => setPrefix('')}
+            onNavigateUp={() => setPrefix(parentPrefix(prefix))}
           />
 
           <Dialog open={folderModalOpen} onOpenChange={setFolderModalOpen}>
-            <DialogContent className="border-[var(--border)] bg-[var(--card)]">
+            <DialogContent className="border-[#d0d7de] bg-white">
               <DialogHeader>
-                <DialogTitle className="text-[var(--card-foreground)]">Create New Folder</DialogTitle>
+                <DialogTitle>Create New Folder</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
-                <Label htmlFor="folderName" className="text-[var(--muted-foreground)]">
+                <Label htmlFor="folderName" className="text-[#5f6368]">
                   Folder name
                 </Label>
                 <Input
                   id="folderName"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ''))}
-                  placeholder="e.g. invoices-2026"
-                  className="border-[var(--border)] bg-[var(--input)] text-[var(--foreground)]"
+                  placeholder="e.g. videos-2026"
+                  className="border-[#d0d7de] bg-white text-[#1f1f1f]"
                 />
               </div>
               <DialogFooter>
-                <Button onClick={handleCreateFolder} className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110">
-                  Create Folder
-                </Button>
+                <Button onClick={handleCreateFolder}>Create Folder</Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+            <DialogContent className="border-[#d0d7de] bg-white">
+              <DialogHeader>
+                <DialogTitle>Upload Files</DialogTitle>
+              </DialogHeader>
+              <UploadDropzone
+                bucketName={credentials.bucketName}
+                prefix={effectiveUploadPrefix}
+                onUploadComplete={() => {
+                  fetchBucketContents();
+                  setUploadModalOpen(false);
+                }}
+                uploadTarget={uploadTarget}
+                onUploadTargetChange={setUploadTarget}
+                currentPrefix={prefix}
+              />
             </DialogContent>
           </Dialog>
         </div>

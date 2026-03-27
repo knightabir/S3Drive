@@ -103,10 +103,10 @@ export default function UploadDropzone(props) {
 
   return (
     <div
-      className={`rounded-xl border-2 border-dashed p-5 text-center transition ${
+      className={`rounded-md border-2 border-dashed p-4 text-center transition ${
         dragActive
-          ? 'border-[var(--secondary)] bg-[var(--secondary)]/10'
-          : 'border-[var(--border)] bg-black/20'
+          ? 'border-[#0b57d0] bg-[#e8f0fe]'
+          : 'border-[#d0d7de] bg-[#fafafa]'
       }`}
       onDragOver={(e) => {
         e.preventDefault();
@@ -123,8 +123,8 @@ export default function UploadDropzone(props) {
           type="button"
           className={`rounded-full px-3 py-1 transition ${
             uploadTarget === 'current'
-              ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-              : 'border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-white/5'
+              ? 'bg-[#0b57d0] text-white'
+              : 'border border-[#d0d7de] text-[#5f6368] hover:bg-[#f1f3f4]'
           }`}
           onClick={() => onUploadTargetChange('current')}
           disabled={uploading}
@@ -135,8 +135,8 @@ export default function UploadDropzone(props) {
           type="button"
           className={`rounded-full px-3 py-1 transition ${
             uploadTarget === 'root'
-              ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-              : 'border border-[var(--border)] text-[var(--muted-foreground)] hover:bg-white/5'
+              ? 'bg-[#0b57d0] text-white'
+              : 'border border-[#d0d7de] text-[#5f6368] hover:bg-[#f1f3f4]'
           }`}
           onClick={() => onUploadTargetChange('root')}
           disabled={uploading}
@@ -145,22 +145,22 @@ export default function UploadDropzone(props) {
         </button>
       </div>
 
-      <Upload className="mx-auto mb-2 h-7 w-7 text-[var(--secondary)]" />
-      <p className="text-sm text-[var(--muted-foreground)]">Drag files here or choose files.</p>
-      <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+      <Upload className="mx-auto mb-2 h-7 w-7 text-[#0b57d0]" />
+      <p className="text-sm text-[#5f6368]">Drag files here or choose files.</p>
+      <p className="mt-1 text-xs text-[#5f6368]">
         Target: {uploadTarget === 'root' ? 'Root ( / )' : currentPrefix || 'Root ( / )'}
       </p>
 
       <input type="file" multiple onChange={handleChange} className="hidden" id="file-upload" disabled={uploading} />
       <label htmlFor="file-upload">
-        <Button className="mt-3 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110" disabled={uploading} asChild>
+        <Button className="mt-3 h-8 rounded-md bg-[#0b57d0] text-white hover:bg-[#0842a0]" disabled={uploading} asChild>
           <span>{uploading ? 'Uploading…' : 'Select Files'}</span>
         </Button>
       </label>
 
       {(uploading || progress > 0) && (
-        <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-[var(--muted)]">
-          <div className="h-full rounded-full bg-[var(--secondary)] transition-all duration-300" style={{ width: `${progress}%` }} />
+        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#e8eaed]">
+          <div className="h-full rounded-full bg-[#0b57d0] transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
       )}
     </div>
