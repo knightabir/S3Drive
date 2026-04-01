@@ -6,9 +6,9 @@ import { Label } from '@/components/ui/label';
 import { ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from "framer-motion";
 import { FaKey, FaLock, FaGlobeAmericas, FaDropbox, FaExclamationCircle } from 'react-icons/fa';
-import LoadingConnection from './shared/LoadingConnection';
 
 const fields = [
   {
@@ -40,6 +40,10 @@ const fields = [
     type: 'text',
   },
 ];
+
+const ConnectionLoader = dynamic(() => import('@/src/components/loaders/ConnectionLoader'), {
+  ssr: false,
+});
 
 const S3LoginForm = () => {
   const [credentials, setCredentials] = useState({
@@ -89,7 +93,7 @@ const S3LoginForm = () => {
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-md rounded-2xl"
           >
-            <LoadingConnection />
+            <ConnectionLoader />
           </motion.div>
         )}
       </AnimatePresence>
