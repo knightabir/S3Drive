@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Globe, Laptop2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { usePrefersReducedMotion } from '@/src/hooks/usePrefersReducedMotion';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 
 const statusMessages = ['Connecting…', 'Establishing secure connection…'];
 
