@@ -1,0 +1,18 @@
+<svg width="900" height="260" viewBox="0 0 900 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="260" rx="20" fill="#F8FAFC"/>
+  <rect x="70" y="90" width="110" height="80" rx="14" fill="#DBEAFE" stroke="#2563EB"/>
+  <rect x="85" y="104" width="80" height="44" rx="8" fill="#2563EB" opacity="0.5"/>
+  <text x="79" y="190" fill="#1E293B" font-size="16" font-family="Arial">Local System</text>
+
+  <rect x="720" y="90" width="110" height="80" rx="14" fill="#DBEAFE" stroke="#2563EB"/>
+  <circle cx="775" cy="130" r="24" stroke="#2563EB" stroke-width="4"/>
+  <path d="M751 130H799M775 106C764 116 764 144 775 154M775 106C786 116 786 144 775 154" stroke="#2563EB" stroke-width="3"/>
+  <text x="703" y="190" fill="#1E293B" font-size="16" font-family="Arial">Global Internet</text>
+
+  <path d="M200 130C310 35 545 220 700 130" stroke="#2563EB" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="330" cy="100" r="10" fill="#60A5FA"/>
+  <circle cx="450" cy="150" r="10" fill="#3B82F6"/>
+  <circle cx="575" cy="112" r="10" fill="#1D4ED8"/>
+
+  <text x="330" y="230" fill="#0F172A" font-size="24" font-family="Arial" font-weight="700">Connecting… Establishing secure connection…</text>
+</svg>
